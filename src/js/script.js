@@ -1,5 +1,5 @@
 const CONFIG = {
-    START_DATE: '2024-07-21',
+    START_DATE: '2024-07-21T00:00:00',
     EMOJIS: [
         '❤️', '🩷', '🧡', '💛', '💚', '💙', '🩵', '💜', '🤎', '🖤', '🩶', '🤍',
         '❤️‍🔥', '💕', '💞', '💓', '💗', '💖', '💘', '💝'
@@ -224,16 +224,13 @@ const CarouselManager = {
             div.className = `carousel-item ${index === 0 ? 'active' : ''}`;
             
             div.innerHTML = `
-                <div class="box-border border-4 border-[#262626] rounded-[1.8rem] overflow-hidden">
                     <img 
                         src="${imgSrc}" 
                         alt="Nosso momento especial ${index + 1}" 
-                        class="size-full object-cover object-center" 
                         loading="${index === 0 ? 'eager' : 'lazy'}" 
                         referrerpolicy="no-referrer" 
                         draggable="false"
                     >
-                </div>
             `;
             
             track.appendChild(div);
@@ -324,13 +321,13 @@ const CounterManager = {
     },
 
     updateCounter() {
-        if (!moment) {
-            console.error('Moment.js não carregado');
+        if (typeof dateFns === 'undefined') {
+            console.error('date-fns não carregado');
             return;
         }
         
-        const start = moment(CONFIG.START_DATE);
-        const now = moment();
+        const start = new Date(CONFIG.START_DATE);
+        const now = new Date();
         
         const values = this.calculateTimeDifference(start, now);
         
@@ -350,24 +347,30 @@ const CounterManager = {
     },
 
     calculateTimeDifference(start, end) {
-        let temp = start.clone();
+        const { 
+            differenceInYears, differenceInMonths, differenceInDays, 
+            differenceInHours, differenceInMinutes, differenceInSeconds, 
+            addYears, addMonths, addDays, addHours, addMinutes 
+        } = dateFns;
+
+        let temp = new Date(start);
         
-        const years = end.diff(temp, 'years');
-        temp.add(years, 'years');
-        
-        const months = end.diff(temp, 'months');
-        temp.add(months, 'months');
-        
-        const days = end.diff(temp, 'days');
-        temp.add(days, 'days');
-        
-        const hours = end.diff(temp, 'hours');
-        temp.add(hours, 'hours');
-        
-        const minutes = end.diff(temp, 'minutes');
-        temp.add(minutes, 'minutes');
-        
-        const seconds = end.diff(temp, 'seconds');
+        const years = differenceInYears(end, temp);
+        temp = addYears(temp, years);
+
+        const months = differenceInMonths(end, temp);
+        temp = addMonths(temp, months);
+
+        const days = differenceInDays(end, temp);
+        temp = addDays(temp, days);
+
+        const hours = differenceInHours(end, temp);
+        temp = addHours(temp, hours);
+
+        const minutes = differenceInMinutes(end, temp);
+        temp = addMinutes(temp, minutes);
+
+        const seconds = differenceInSeconds(end, temp);
         
         return { years, months, days, hours, minutes, seconds };
     },
@@ -733,17 +736,3 @@ if (document.readyState === 'loading') {
 }
 
 window.addEventListener('beforeunload', () => App.cleanup());
-
-if (typeof window !== 'undefined') {
-    window.AppDebug = {
-        App,
-        CarouselManager,
-        CounterManager,
-        MusicManager,
-        ModalManager,
-        EffectsManager,
-        DOMElements,
-        AppState,
-        CONFIG
-    };
-}
