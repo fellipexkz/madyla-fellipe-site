@@ -1,0 +1,19 @@
+services:
+  site:
+    build: .
+    container_name: madyla-fellipe-site
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/usr/share/nginx/html
+    develop:
+      watch:
+        - action: sync
+          path: ./
+          target: /usr/share/nginx/html
+          ignore:
+            - Dockerfile
+            - docker-compose.yml
+            - "*.md"
+        - action: rebuild
+          path: Dockerfile
