@@ -281,8 +281,10 @@ const CarouselManager = {
         
         const adjustHeightCallback = () => {
             const rect = activeImg.getBoundingClientRect();
-            if (rect.height > 0) {
-                container.style.height = `${rect.height}px`;
+            if (rect.height > 0 && rect.width > 0) {
+                const aspectRatio = rect.width / rect.height;
+                const maxWidth = parseFloat(getComputedStyle(container).maxWidth);
+                container.style.height = `${maxWidth / aspectRatio}px`;
             }
         };
         
@@ -446,10 +448,12 @@ const MusicManager = {
             }
             
             icon.classList.remove('fade-out');
+            icon.style.opacity = '1';
             icon.classList.add('fade-in');
             
             setTimeout(() => {
                 icon.classList.remove('fade-in');
+                icon.style.opacity = '';
             }, CONFIG.ANIMATION_DURATION / 3);
         }, CONFIG.ANIMATION_DURATION / 5);
     }
