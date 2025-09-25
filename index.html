@@ -71,13 +71,21 @@
                 </button>
             </article>
             <article class="timeline-item">
-                <h3>Hoje e Sempre</h3>
-                <p>Cada dia com você é uma nova aventura, e mal podemos esperar pelo que o futuro nos reserva.</p>
+                <button type="button" id="openHojeSempreModal" class="timeline-modal-btn"
+                    aria-describedby="hoje-sempre-desc">
+                    <h3>Hoje e Sempre</h3>
+                    <p id="hoje-sempre-desc">Cada dia com você é uma nova aventura, e mal podemos esperar pelo que o
+                        futuro nos reserva.</p>
+                </button>
+            </article>
+            <article class="timeline-item">
+                <h3>Um Amanhã Brilhante</h3>
+                <p>Nosso amor é a bússola que aponta para um horizonte cheio de promessas, prontos para construirmos uma
+                    vida inesquecível.</p>
             </article>
         </section>
 
         <section class="spotify-embed-container" aria-label="Nossa playlist especial">
-            <h2 class="spotify-title">Nossa Playlist</h2>
             <iframe data-testid="embed-iframe" class="spotify-embed-iframe"
                 src="https://open.spotify.com/embed/playlist/2VJ5mPLlAw5r51qzJRN9eC?utm_source=generator&theme=0"
                 width="100%" height="352" frameBorder="0"
@@ -124,6 +132,30 @@
             <img src="/assets/images/pedido-namoro.jpg" alt="Foto do pedido de namoro" class="custom-modal-img"
                 loading="lazy">
             <button type="button" id="closeProposalModal" class="button custom-modal-close">Fechar</button>
+        </div>
+    </div>
+
+    <div id="hojeSempreModal" class="modal hidden" role="dialog" aria-labelledby="hoje-sempre-modal-title"
+        aria-modal="true">
+        <div class="custom-modal-content">
+            <h2 id="hoje-sempre-modal-title" class="sr-only">Hoje e Sempre</h2>
+            <div id="hojeSempreModalText" class="modal-text-container">
+                <div class="modal-message">
+                    <div class="modal-message-content">
+                        <p>Querida Mádyla,</p>
+                        <p>Desde o nosso primeiro momento juntos, soube que era especial. Meu coração escolheu o seu, e
+                            cada dia ao seu lado é uma felicidade imensa. Você é o amor da minha vida, minha inspiração
+                            para ser melhor.</p>
+                        <p>Seu sorriso, seu olhar, seu jeito de ser — tudo em você acalma meu coração e ilumina meu
+                            caminho, como o sol e a lua. Por você, eu movo montanhas. Você é meu tudo, e sou grato por
+                            dividir a vida com você.</p>
+                        <p>Que Deus abençoe nosso amor, guiando-nos sempre. Te amo infinitamente, e meu coração arde por
+                            você, hoje e para sempre.</p>
+                    </div>
+                    <div class="modal-message-signature">Com todo o meu amor,<br>Fellipe</div>
+                </div>
+            </div>
+            <button type="button" id="closeHojeSempreModal" class="button custom-modal-close">Fechar</button>
         </div>
     </div>
 

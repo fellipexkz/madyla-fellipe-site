@@ -34,6 +34,7 @@ const DOMElements = {
         proposal: null,
         mapContainer: null,
         skyContainer: null
+        , hojeSempre: null
     },
     buttons: {
         openMap: null,
@@ -41,6 +42,8 @@ const DOMElements = {
         toggleMapSky: null,
         openProposal: null,
         closeProposal: null
+        , openHojeSempre: null
+        , closeHojeSempre: null
     },
     effects: {
         emojiRain: null
@@ -143,12 +146,15 @@ const DOMManager = {
         DOMElements.modals.proposal = document.getElementById('proposalModal');
         DOMElements.modals.mapContainer = document.getElementById('mapContainer');
         DOMElements.modals.skyContainer = document.getElementById('skyMapContainer');
+        DOMElements.modals.hojeSempre = document.getElementById('hojeSempreModal');
 
         DOMElements.buttons.openMap = document.getElementById('openMapModal');
         DOMElements.buttons.closeMap = document.getElementById('closeMapModal');
         DOMElements.buttons.toggleMapSky = document.getElementById('toggleMapSky');
         DOMElements.buttons.openProposal = document.getElementById('openProposalModal');
         DOMElements.buttons.closeProposal = document.getElementById('closeProposalModal');
+        DOMElements.buttons.openHojeSempre = document.getElementById('openHojeSempreModal');
+        DOMElements.buttons.closeHojeSempre = document.getElementById('closeHojeSempreModal');
 
         DOMElements.effects.emojiRain = document.getElementById('emoji-rain');
 
@@ -463,6 +469,34 @@ const ModalManager = {
     init() {
         this.initMapModal();
         this.initProposalModal();
+        this.initHojeSempreModal();
+    },
+    initHojeSempreModal() {
+        const { openHojeSempre, closeHojeSempre } = DOMElements.buttons;
+        const { hojeSempre } = DOMElements.modals;
+
+        if (!openHojeSempre || !closeHojeSempre || !hojeSempre) return;
+
+        openHojeSempre.addEventListener('click', () => this.openHojeSempreModal());
+        closeHojeSempre.addEventListener('click', () => this.closeHojeSempreModal());
+        hojeSempre.addEventListener('click', (e) => {
+            if (e.target === hojeSempre) this.closeHojeSempreModal();
+        });
+    },
+
+    openHojeSempreModal() {
+        const { hojeSempre } = DOMElements.modals;
+        if (!hojeSempre) return;
+        hojeSempre.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            hojeSempre.querySelector('.custom-modal-content')?.focus();
+        });
+    },
+
+    closeHojeSempreModal() {
+        const { hojeSempre } = DOMElements.modals;
+        if (!hojeSempre) return;
+        hojeSempre.classList.add('hidden');
     },
 
     initMapModal() {
