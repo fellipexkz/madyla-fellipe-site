@@ -56,7 +56,7 @@ const AppState = {
     emojiIntervalId: null,
     carouselIntervalId: null,
     lastCounterValues: {
-        years: 0, months: 0, days: 0, 
+        years: 0, months: 0, days: 0,
         hours: 0, minutes: 0, seconds: 0
     }
 };
@@ -88,7 +88,7 @@ const Utils = {
         let lastExecTime = 0;
         return function (...args) {
             const currentTime = Date.now();
-            
+
             if (currentTime - lastExecTime > delay) {
                 func.apply(this, args);
                 lastExecTime = currentTime;
@@ -113,10 +113,10 @@ const Utils = {
 
     animateValueChange(element, newValue, currentValue) {
         if (!element || String(currentValue) === String(newValue)) return;
-        
+
         element.classList.add('animate-change');
         element.textContent = newValue;
-        
+
         setTimeout(() => {
             element.classList.remove('animate-change');
         }, CONFIG.ANIMATION_DURATION);
@@ -127,31 +127,31 @@ const DOMManager = {
     init() {
         DOMElements.carousel.track = document.querySelector('.carousel-track');
         DOMElements.carousel.container = document.querySelector('.carousel-container');
-        
+
         DOMElements.counter.years = document.getElementById('years');
         DOMElements.counter.months = document.getElementById('months');
         DOMElements.counter.days = document.getElementById('days');
         DOMElements.counter.hours = document.getElementById('hours');
         DOMElements.counter.minutes = document.getElementById('minutes');
         DOMElements.counter.seconds = document.getElementById('seconds');
-        
+
         DOMElements.music.audio = document.getElementById('backgroundMusic');
         DOMElements.music.control = document.getElementById('musicControl');
         DOMElements.music.icon = document.getElementById('musicIcon');
-        
+
         DOMElements.modals.map = document.getElementById('mapModal');
         DOMElements.modals.proposal = document.getElementById('proposalModal');
         DOMElements.modals.mapContainer = document.getElementById('mapContainer');
         DOMElements.modals.skyContainer = document.getElementById('skyMapContainer');
-        
+
         DOMElements.buttons.openMap = document.getElementById('openMapModal');
         DOMElements.buttons.closeMap = document.getElementById('closeMapModal');
         DOMElements.buttons.toggleMapSky = document.getElementById('toggleMapSky');
         DOMElements.buttons.openProposal = document.getElementById('openProposalModal');
         DOMElements.buttons.closeProposal = document.getElementById('closeProposalModal');
-        
+
         DOMElements.effects.emojiRain = document.getElementById('emoji-rain');
-        
+
         return this.validateElements();
     },
 
@@ -162,17 +162,17 @@ const DOMManager = {
             'counter.hours', 'counter.minutes', 'counter.seconds',
             'effects.emojiRain'
         ];
-        
+
         const missing = critical.filter(path => {
             const [obj, prop] = path.split('.');
             return !DOMElements[obj][prop];
         });
-        
+
         if (missing.length > 0) {
             console.error('Elementos DOM críticos não encontrados:', missing);
             return false;
         }
-        
+
         return true;
     }
 };
@@ -184,15 +184,15 @@ const CarouselManager = {
             if (images.length === 0) {
                 throw new Error('Nenhuma imagem encontrada');
             }
-            
+
             AppState.carouselImages = Utils.shuffleArray(images);
             AppState.totalCarouselItems = images.length;
-            
+
             this.createCarouselItems();
             this.startAutoPlay();
-            
+
             setTimeout(() => this.adjustHeight(), 100);
-            
+
         } catch (error) {
             console.error('Erro ao inicializar carrossel:', error);
             this.showError();
@@ -215,14 +215,14 @@ const CarouselManager = {
     createCarouselItems() {
         const track = DOMElements.carousel.track;
         if (!track) return;
-        
+
         track.innerHTML = '';
-        
+
         AppState.carouselImages.forEach((src, index) => {
             const imgSrc = src.startsWith('/') ? src.slice(1) : src;
             const div = document.createElement('div');
             div.className = `carousel-item ${index === 0 ? 'active' : ''}`;
-            
+
             div.innerHTML = `
                     <img 
                         src="${imgSrc}" 
@@ -232,31 +232,31 @@ const CarouselManager = {
                         draggable="false"
                     >
             `;
-            
+
             track.appendChild(div);
         });
-        
+
         AppState.currentCarouselIndex = 0;
     },
 
     showRandomImage() {
         if (AppState.totalCarouselItems <= 1) return;
-        
+
         let nextIndex;
         do {
             nextIndex = Math.floor(Math.random() * AppState.totalCarouselItems);
         } while (nextIndex === AppState.currentCarouselIndex);
-        
+
         this.transitionToImage(nextIndex);
     },
 
     transitionToImage(nextIndex) {
         const items = DOMElements.carousel.track?.children;
         if (!items || nextIndex >= items.length) return;
-        
+
         const currentItem = items[AppState.currentCarouselIndex];
         const nextItem = items[nextIndex];
-        
+
         if (currentItem) {
             currentItem.classList.remove('active');
             currentItem.classList.add('exit');
@@ -264,21 +264,21 @@ const CarouselManager = {
                 currentItem.classList.remove('exit');
             }, CONFIG.ANIMATION_DURATION);
         }
-        
+
         if (nextItem) {
             nextItem.classList.add('active');
             AppState.currentCarouselIndex = nextIndex;
-            
+
             setTimeout(() => this.adjustHeight(), 100);
         }
     },
 
-    adjustHeight: Utils.debounce(function() {
+    adjustHeight: Utils.debounce(function () {
         const container = DOMElements.carousel.container;
         const activeImg = DOMElements.carousel.track?.querySelector('.carousel-item.active img');
-        
+
         if (!container || !activeImg) return;
-        
+
         const adjustHeightCallback = () => {
             const rect = activeImg.getBoundingClientRect();
             if (rect.height > 0 && rect.width > 0) {
@@ -287,7 +287,7 @@ const CarouselManager = {
                 container.style.height = `${maxWidth / aspectRatio}px`;
             }
         };
-        
+
         if (activeImg.complete && activeImg.naturalHeight !== 0) {
             adjustHeightCallback();
         } else {
@@ -327,36 +327,36 @@ const CounterManager = {
             console.error('date-fns não carregado');
             return;
         }
-        
+
         const start = new Date(CONFIG.START_DATE);
         const now = new Date();
-        
+
         const values = this.calculateTimeDifference(start, now);
-        
+
         Object.entries(values).forEach(([unit, value]) => {
             const element = DOMElements.counter[unit];
             const lastValue = AppState.lastCounterValues[unit];
-            
+
             if (element) {
                 Utils.animateValueChange(element, value, lastValue);
                 AppState.lastCounterValues[unit] = value;
             }
         });
-        
+
         AppState.counterAnimationFrameId = requestAnimationFrame(() => {
             setTimeout(() => this.updateCounter(), CONFIG.COUNTER_UPDATE_INTERVAL);
         });
     },
 
     calculateTimeDifference(start, end) {
-        const { 
-            differenceInYears, differenceInMonths, differenceInDays, 
-            differenceInHours, differenceInMinutes, differenceInSeconds, 
-            addYears, addMonths, addDays, addHours, addMinutes 
+        const {
+            differenceInYears, differenceInMonths, differenceInDays,
+            differenceInHours, differenceInMinutes, differenceInSeconds,
+            addYears, addMonths, addDays, addHours, addMinutes
         } = dateFns;
 
         let temp = new Date(start);
-        
+
         const years = differenceInYears(end, temp);
         temp = addYears(temp, years);
 
@@ -373,7 +373,7 @@ const CounterManager = {
         temp = addMinutes(temp, minutes);
 
         const seconds = differenceInSeconds(end, temp);
-        
+
         return { years, months, days, hours, minutes, seconds };
     },
 
@@ -388,26 +388,26 @@ const CounterManager = {
 const MusicManager = {
     init() {
         const { control, icon, audio } = DOMElements.music;
-        
+
         if (!control || !icon || !audio) {
             console.error('Elementos de música não encontrados');
             return;
         }
-        
+
         this.updateUI(false);
-        
+
         control.addEventListener('click', () => this.toggle());
-        
+
         audio.addEventListener('play', () => {
             AppState.musicPlaying = true;
             this.updateUI(true);
         });
-        
+
         audio.addEventListener('pause', () => {
             AppState.musicPlaying = false;
             this.updateUI(false);
         });
-        
+
         audio.addEventListener('error', (e) => {
             console.error('Erro no áudio:', e);
         });
@@ -416,7 +416,7 @@ const MusicManager = {
     async toggle() {
         const audio = DOMElements.music.audio;
         if (!audio) return;
-        
+
         try {
             if (audio.paused) {
                 await audio.play();
@@ -431,9 +431,9 @@ const MusicManager = {
     updateUI(isPlaying) {
         const { control, icon } = DOMElements.music;
         if (!control || !icon) return;
-        
+
         icon.classList.add('fade-out');
-        
+
         setTimeout(() => {
             if (isPlaying) {
                 icon.src = '/assets/icons/pause.svg';
@@ -446,11 +446,11 @@ const MusicManager = {
                 control.setAttribute('aria-label', 'Reproduzir música');
                 control.setAttribute('title', 'Reproduzir música');
             }
-            
+
             icon.classList.remove('fade-out');
             icon.style.opacity = '1';
             icon.classList.add('fade-in');
-            
+
             setTimeout(() => {
                 icon.classList.remove('fade-in');
                 icon.style.opacity = '';
@@ -468,23 +468,23 @@ const ModalManager = {
     initMapModal() {
         const { openMap, closeMap, toggleMapSky } = DOMElements.buttons;
         const { map } = DOMElements.modals;
-        
+
         if (!openMap || !closeMap || !map) return;
-        
+
         openMap.addEventListener('click', () => this.openMapModal());
         closeMap.addEventListener('click', () => this.closeMapModal());
         map.addEventListener('click', (e) => {
             if (e.target === map) this.closeMapModal();
         });
-        
+
     },
 
     initProposalModal() {
         const { openProposal, closeProposal } = DOMElements.buttons;
         const { proposal } = DOMElements.modals;
-        
+
         if (!openProposal || !closeProposal || !proposal) return;
-        
+
         openProposal.addEventListener('click', () => this.openProposalModal());
         closeProposal.addEventListener('click', () => this.closeProposalModal());
         proposal.addEventListener('click', (e) => {
@@ -495,20 +495,20 @@ const ModalManager = {
     openMapModal() {
         const { map } = DOMElements.modals;
         const { toggleMapSky } = DOMElements.buttons;
-        
+
         if (!map) return;
-        
+
         map.classList.remove('hidden');
         this.resetMapModal();
-        
+
         if (toggleMapSky) {
             const newToggle = toggleMapSky.cloneNode(true);
             toggleMapSky.parentNode.replaceChild(newToggle, toggleMapSky);
             DOMElements.buttons.toggleMapSky = newToggle;
-            
+
             newToggle.addEventListener('click', () => this.toggleMapView());
         }
-        
+
         requestAnimationFrame(() => {
             map.style.opacity = '1';
         });
@@ -517,7 +517,7 @@ const ModalManager = {
     closeMapModal() {
         const { map } = DOMElements.modals;
         if (!map) return;
-        
+
         map.classList.add('hidden');
         this.resetMapModal();
     },
@@ -525,7 +525,7 @@ const ModalManager = {
     resetMapModal() {
         const { mapContainer, skyContainer } = DOMElements.modals;
         const { toggleMapSky } = DOMElements.buttons;
-        
+
         if (skyContainer) skyContainer.classList.add('hidden');
         if (mapContainer) mapContainer.classList.remove('hidden');
         if (toggleMapSky) toggleMapSky.textContent = 'Mapa do Céu';
@@ -535,24 +535,24 @@ const ModalManager = {
         const { mapContainer, skyContainer } = DOMElements.modals;
         const { toggleMapSky } = DOMElements.buttons;
         const modalContent = DOMElements.modals.map?.querySelector('.custom-modal-content');
-        
+
         if (!mapContainer || !skyContainer || !toggleMapSky || !modalContent) return;
-        
+
         const isSkyVisible = !skyContainer.classList.contains('hidden');
-        
+
         const currentHeight = modalContent.offsetHeight;
-        
+
         skyContainer.classList.add('hidden');
         mapContainer.classList.add('hidden');
-        
+
         if (isSkyVisible) {
             mapContainer.classList.remove('hidden');
         } else {
             skyContainer.classList.remove('hidden');
         }
-        
+
         const targetHeight = modalContent.offsetHeight;
-        
+
         if (isSkyVisible) {
             mapContainer.classList.add('hidden');
             skyContainer.classList.remove('hidden');
@@ -560,19 +560,19 @@ const ModalManager = {
             skyContainer.classList.add('hidden');
             mapContainer.classList.remove('hidden');
         }
-        
+
         if (currentHeight !== targetHeight) {
             modalContent.style.height = `${currentHeight}px`;
-            
+
             setTimeout(() => {
                 modalContent.style.height = `${targetHeight}px`;
-                
+
                 setTimeout(() => {
                     modalContent.style.height = '';
                 }, CONFIG.TRANSITION_DURATION);
             }, 10);
         }
-        
+
         if (isSkyVisible) {
             skyContainer.classList.add('hidden');
             mapContainer.classList.remove('hidden');
@@ -587,9 +587,9 @@ const ModalManager = {
     openProposalModal() {
         const { proposal } = DOMElements.modals;
         if (!proposal) return;
-        
+
         proposal.classList.remove('hidden');
-        
+
         requestAnimationFrame(() => {
             proposal.style.opacity = '1';
         });
@@ -598,7 +598,7 @@ const ModalManager = {
     closeProposalModal() {
         const { proposal } = DOMElements.modals;
         if (!proposal) return;
-        
+
         proposal.classList.add('hidden');
     }
 };
@@ -622,22 +622,22 @@ const EffectsManager = {
         }
     },
 
-    createEmoji: Utils.throttle(function() {
+    createEmoji: Utils.throttle(function () {
         const emojiRain = DOMElements.effects.emojiRain;
         if (!emojiRain) return;
-        
+
         const currentEmojis = emojiRain.querySelectorAll('.emoji');
         if (currentEmojis.length >= CONFIG.MAX_EMOJIS) return;
-        
+
         const emoji = document.createElement('span');
         emoji.classList.add('emoji');
         emoji.textContent = CONFIG.EMOJIS[Math.floor(Math.random() * CONFIG.EMOJIS.length)];
-        
+
         emoji.style.left = `${Math.random() * window.innerWidth}px`;
         emoji.style.animationDuration = `${2 + Math.random() * 2}s`;
-        
+
         emojiRain.appendChild(emoji);
-        
+
         emoji.addEventListener('animationend', () => {
             if (emoji.parentNode) {
                 emoji.parentNode.removeChild(emoji);
@@ -650,23 +650,23 @@ const App = {
     async init() {
         try {
             console.log('Inicializando aplicação...');
-            
+
             if (!DOMManager.init()) {
                 throw new Error('Falha na inicialização dos elementos DOM');
             }
-            
+
             await CarouselManager.init();
             CounterManager.init();
             MusicManager.init();
             ModalManager.init();
             EffectsManager.init();
-            
+
             this.setupGlobalListeners();
-            
+
             this.showMainContent();
-            
+
             console.log('Aplicação inicializada com sucesso');
-            
+
         } catch (error) {
             console.error('Erro na inicialização:', error);
             this.handleInitError(error);
@@ -677,7 +677,7 @@ const App = {
         window.addEventListener('resize', Utils.debounce(() => {
             CarouselManager.adjustHeight();
         }, 250));
-        
+
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 EffectsManager.stopEmojiRain();
@@ -685,7 +685,7 @@ const App = {
                 EffectsManager.startEmojiRain();
             }
         });
-        
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (!DOMElements.modals.map?.classList.contains('hidden')) {
@@ -701,12 +701,12 @@ const App = {
     showMainContent() {
         const mainContent = document.getElementById('mainContent');
         const musicControl = DOMElements.music.control;
-        
+
         if (mainContent) {
             mainContent.classList.remove('hidden');
             mainContent.classList.add('fade-in');
         }
-        
+
         if (musicControl) {
             musicControl.classList.remove('hidden');
         }
