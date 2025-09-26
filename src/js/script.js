@@ -207,7 +207,7 @@ const CarouselManager = {
 
     async loadImages() {
         try {
-            const response = await fetch('/src/data/images.json', { cache: 'no-store' });
+            const response = await fetch('src/data/images.json', { cache: 'no-store' });
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -442,12 +442,12 @@ const MusicManager = {
 
         setTimeout(() => {
             if (isPlaying) {
-                icon.src = '/assets/icons/pause.svg';
+                icon.src = 'assets/icons/pause.svg';
                 icon.alt = 'Pausar';
                 control.setAttribute('aria-label', 'Pausar música');
                 control.setAttribute('title', 'Pausar música');
             } else {
-                icon.src = '/assets/icons/play.svg';
+                icon.src = 'assets/icons/play.svg';
                 icon.alt = 'Reproduzir';
                 control.setAttribute('aria-label', 'Reproduzir música');
                 control.setAttribute('title', 'Reproduzir música');
