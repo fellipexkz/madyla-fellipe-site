@@ -4,12 +4,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="preconnect" href="https://open.spotify.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.google.com">
+    
+    <link rel="preload" href="assets/fonts/inter-v20-latin-regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="assets/fonts/inter-v20-latin-600.woff2" as="font" type="font/woff2" crossorigin>
+    
     <meta name="description" content="Celebrando nossa jornada juntos - Mádyla e Fellipe">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
     <title>Mádyla e Fellipe</title>
     <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="src/css/styles.css" rel="stylesheet">
+    
+    <style>
+        @font-face {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: url('assets/fonts/inter-v20-latin-regular.woff2') format('woff2');
+        }
+        
+        @font-face {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 500;
+            font-display: swap;
+            src: url('assets/fonts/inter-v20-latin-500.woff2') format('woff2');
+        }
+        
+        @font-face {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 600;
+            font-display: swap;
+            src: url('assets/fonts/inter-v20-latin-600.woff2') format('woff2');
+        }
+        
+        @font-face {
+            font-family: 'Inter';
+            font-style: normal;
+            font-weight: 700;
+            font-display: swap;
+            src: url('assets/fonts/inter-v20-latin-700.woff2') format('woff2');
+        }
+
+        :root {
+            --primary-color: #ff6699;
+            --background-color: #37353E;
+            --card-background: #2d2b34;
+            --text-primary: #F2F9FE;
+            --text-secondary: #ABB0BC;
+            --text-muted: #e6e1e5;
+            --border-color: rgba(38, 38, 38, 0.6);
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --max-content-width: 500px;
+            --carousel-max-width: 320px;
+            --border-radius: 0.75rem;
+            --border-radius-large: 1.8rem;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--background-color);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Arial', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.6;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .overflow-hidden {
+            overflow: hidden !important;
+        }
+
+        .mt-10 {
+            margin-top: 2.5rem;
+        }
+
+        .main-container {
+            max-width: var(--max-content-width);
+            width: 100%;
+            margin: 0 auto;
+            padding: 1.5rem 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .carousel-vertical {
+            margin: 0 auto;
+            max-width: var(--carousel-max-width);
+            width: 100%;
+        }
+
+        .carousel-vertical-container {
+            overflow: hidden;
+            max-width: var(--carousel-max-width);
+            width: 100%;
+            position: relative;
+            aspect-ratio: 3/4;
+            height: 420px;
+        }
+
+        .time-counter {
+            padding: 1rem;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            border-radius: 0.875rem;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            color: var(--text-primary);
+        }
+
+        .time-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 0.5rem 0;
+            text-align: center;
+        }
+    </style>
+    
+    <link rel="preload" href="src/css/styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="src/css/styles.css"></noscript>
+    
     <link rel="preload" href="src/js/script.js" as="script">
 </head>
 
@@ -94,14 +230,14 @@
         <section class="spotify-embed-container" aria-label="Nossa playlist especial">
             <iframe data-testid="embed-iframe" class="spotify-embed-iframe"
                 src="https://open.spotify.com/embed/playlist/2VJ5mPLlAw5r51qzJRN9eC?utm_source=generator&theme=0"
-                width="100%" height="352" frameBorder="0"
+                width="100%" height="352" frameBorder="0" loading="lazy"
                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                 title="Playlist do Spotify - Nossa música especial">
             </iframe>
         </section>
     </main>
 
-    <audio id="backgroundMusic" src="assets/audio/amor-dos-deuses.mp3" loop preload="none"
+    <audio id="backgroundMusic" src="assets/audio/amor-dos-deuses.mp3" loop preload="metadata"
         aria-label="Música de fundo"></audio>
     <button type="button" id="musicControl" class="music-control" aria-label="Reproduzir música"
         title="Reproduzir música">
@@ -115,7 +251,7 @@
             <h2 id="map-modal-title" class="sr-only">Nosso Primeiro Contato</h2>
             <div class="custom-modal-map" id="mapContainer">
                 <iframe class="custom-modal-iframe" width="100%" height="320" frameborder="0" scrolling="no"
-                    marginheight="0" marginwidth="0"
+                    marginheight="0" marginwidth="0" loading="lazy"
                     src="https://www.google.com/maps/embed?pb=!1m13!1m8!1m3!1d31910.466494213622!2d-47.84665!3d-1.289237!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMcKwMTcnMjEuMyJTIDQ3wrA1MCc0Ny45Ilc!5e0!3m2!1sen!2sus!4v1758729766799!5m2!1sen!2sus"
                     title="Local do Primeiro Contato">
                 </iframe>
@@ -166,7 +302,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/date-fns@3.6.0/cdn.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="src/js/script.js" defer></script>
 </body>
 
