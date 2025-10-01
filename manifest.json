@@ -1,0 +1,23 @@
+{
+  "name": "Mádyla e Fellipe - Nossa Jornada",
+  "short_name": "M&F",
+  "description": "Celebrando nossa jornada juntos desde 21/07/2024",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#37353E",
+  "theme_color": "#ff6699",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/assets/icons/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "personalization"],
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false
+}

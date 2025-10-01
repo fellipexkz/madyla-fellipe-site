@@ -10,7 +10,13 @@ const CONFIG = {
     VERTICAL_CAROUSEL_INTERVAL: 4000,
     HORIZONTAL_CAROUSEL_INTERVAL: 4000,
     ANIMATION_DURATION: 600,
-    COUNTER_UPDATE_INTERVAL: 1000
+    TRANSITION_DURATION: 400,
+    COUNTER_UPDATE_INTERVAL: 1000,
+    ICON_FADE_DURATION: 200,
+    MAX_RETRY_ATTEMPTS: 3,
+    RETRY_BASE_DELAY: 1000,
+    PRELOAD_COUNT: 3,
+    IMAGE_CACHE_MAX: 50
 };
 
 const DOMElements = {
@@ -71,7 +77,10 @@ const AppState = {
     lastCounterValues: {
         years: 0, months: 0, days: 0,
         hours: 0, minutes: 0, seconds: 0
-    }
+    },
+    activeEmojiElements: new Set(),
+    imageCache: new Map(),
+    retryAttempts: new Map()
 };
 
 const DOMManager = {
@@ -135,6 +144,23 @@ const DOMManager = {
 };
 
 const CarouselManager = {
+    async retryWithBackoff(fn, maxAttempts = CONFIG.MAX_RETRY_ATTEMPTS) {
+        let lastError;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return await fn();
+            } catch (error) {
+                lastError = error;
+                if (attempt < maxAttempts) {
+                    const delay = CONFIG.RETRY_BASE_DELAY * Math.pow(2, attempt - 1);
+                    console.warn(`Tentativa ${attempt} falhou. Tentando novamente em ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+        throw lastError;
+    },
+
     async init() {
         try {
             const [verticalImages, horizontalImages] = await Promise.all([
@@ -173,11 +199,69 @@ const CarouselManager = {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            return await response.json();
+            const images = await response.json();
+            
+            const imagePattern = /^(\/)?assets\/images\/carousel\/foto-\d{2}\.webp$/;
+            return images.filter(src => {
+                if (typeof src !== 'string') return false;
+                const sanitized = src.trim();
+                return imagePattern.test(sanitized);
+            });
         } catch (error) {
             console.warn(`Erro ao carregar ${jsonPath}:`, error);
+            this.showUserFriendlyError('Não foi possível carregar as imagens. Tente recarregar a página.');
             return [];
         }
+    },
+
+    showUserFriendlyError(message) {
+        const errorContainer = document.createElement('div');
+        errorContainer.className = 'error-notification';
+        errorContainer.setAttribute('role', 'alert');
+        errorContainer.innerHTML = `
+            <p>${message}</p>
+            <button onclick="this.parentElement.remove()" class="button">Fechar</button>
+        `;
+        document.body.appendChild(errorContainer);
+        
+        setTimeout(() => {
+            if (errorContainer.parentElement) {
+                errorContainer.remove();
+            }
+        }, 10000);
+    },
+
+    preloadImage(src) {
+        if (AppState.imageCache.has(src)) {
+            return Promise.resolve(AppState.imageCache.get(src));
+        }
+
+        return this.retryWithBackoff(async () => {
+            const img = new Image();
+            const promise = new Promise((resolve, reject) => {
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error(`Falha ao carregar: ${src}`));
+            });
+            img.src = src;
+            await promise;
+            
+            if (AppState.imageCache.size >= CONFIG.IMAGE_CACHE_MAX) {
+                const firstKey = AppState.imageCache.keys().next().value;
+                AppState.imageCache.delete(firstKey);
+            }
+            
+            AppState.imageCache.set(src, img);
+            return img;
+        });
+    },
+
+    async preloadInitialImages(type) {
+        const images = type === 'vertical' ? AppState.verticalImages : AppState.horizontalImages;
+        const imagesToPreload = images.slice(0, CONFIG.PRELOAD_COUNT);
+        
+        await Promise.allSettled(
+            imagesToPreload.map(src => this.preloadImage(src.startsWith('/') ? src.slice(1) : src))
+        );
     },
 
     createCarouselItems(type) {
@@ -193,29 +277,63 @@ const CarouselManager = {
 
         track.innerHTML = '';
 
-        images.forEach((src, index) => {
-            const imgSrc = src.startsWith('/') ? src.slice(1) : src;
+        const skeleton = document.createElement('div');
+        skeleton.className = 'carousel-skeleton';
+        track.appendChild(skeleton);
+
+        for (let i = 0; i < 2; i++) {
             const div = document.createElement('div');
-            div.className = `carousel-item ${index === 0 ? 'active' : ''}`;
-
-            div.innerHTML = `
-                <img 
-                    src="${imgSrc}" 
-                    alt="Nosso momento especial ${type} ${index + 1}" 
-                    loading="${index === 0 ? 'eager' : 'lazy'}" 
-                    referrerpolicy="no-referrer" 
-                    draggable="false"
-                >
-            `;
-
+            div.className = `carousel-item ${i === 0 ? 'active' : ''}`;
+            div.dataset.position = i === 0 ? 'current' : 'next';
             track.appendChild(div);
+        }
+
+        this.loadImageIntoSlot(type, 0, 'current').then(() => {
+            skeleton.remove();
         });
+
+        this.preloadInitialImages(type);
 
         if (type === 'vertical') {
             AppState.currentVerticalIndex = 0;
         } else {
             AppState.currentHorizontalIndex = 0;
         }
+    },
+
+    async loadImageIntoSlot(type, imageIndex, slot) {
+        const track = type === 'vertical' 
+            ? DOMElements.carousel.verticalTrack 
+            : DOMElements.carousel.horizontalTrack;
+        
+        const images = type === 'vertical' 
+            ? AppState.verticalImages 
+            : AppState.horizontalImages;
+
+        if (!track || !images[imageIndex]) return;
+
+        const slotElement = track.querySelector(`[data-position="${slot}"]`);
+        if (!slotElement) return;
+
+        const imgSrc = images[imageIndex].startsWith('/') 
+            ? images[imageIndex].slice(1) 
+            : images[imageIndex];
+
+        try {
+            await this.preloadImage(imgSrc);
+        } catch (error) {
+            console.error(`Erro ao carregar imagem ${imgSrc}:`, error);
+        }
+
+        slotElement.innerHTML = `
+            <img 
+                src="${imgSrc}" 
+                alt="Nosso momento especial ${type} ${imageIndex + 1}" 
+                loading="lazy" 
+                referrerpolicy="no-referrer" 
+                draggable="false"
+            >
+        `;
     },
 
     showRandomImage(type) {
@@ -241,32 +359,57 @@ const CarouselManager = {
         const track = type === 'vertical' 
             ? DOMElements.carousel.verticalTrack 
             : DOMElements.carousel.horizontalTrack;
-        
-        const currentIndex = type === 'vertical' 
-            ? AppState.currentVerticalIndex 
-            : AppState.currentHorizontalIndex;
 
-        const items = track?.children;
-        if (!items || nextIndex >= items.length) return;
+        if (!track) return;
 
-        const currentItem = items[currentIndex];
-        const nextItem = items[nextIndex];
+        const currentSlot = track.querySelector('[data-position="current"]');
+        const nextSlot = track.querySelector('[data-position="next"]');
 
-        if (currentItem) {
-            currentItem.classList.remove('active');
-            currentItem.classList.add('exit');
-            setTimeout(() => {
-                currentItem.classList.remove('exit');
-            }, CONFIG.ANIMATION_DURATION);
-        }
+        if (!currentSlot || !nextSlot) return;
 
-        if (nextItem) {
-            nextItem.classList.add('active');
-            
-            if (type === 'vertical') {
-                AppState.currentVerticalIndex = nextIndex;
+        this.loadImageIntoSlot(type, nextIndex, 'next');
+
+        const nextImg = nextSlot.querySelector('img');
+        if (nextImg) {
+            const transitionImages = () => {
+                currentSlot.classList.remove('active');
+                nextSlot.classList.add('active');
+
+                setTimeout(() => {
+                    currentSlot.dataset.position = 'next';
+                    nextSlot.dataset.position = 'current';
+                    currentSlot.classList.remove('active');
+                    
+                    if (type === 'vertical') {
+                        AppState.currentVerticalIndex = nextIndex;
+                    } else {
+                        AppState.currentHorizontalIndex = nextIndex;
+                    }
+                }, CONFIG.TRANSITION_DURATION);
+            };
+
+            let loadTimeout;
+            const handleImageLoad = () => {
+                clearTimeout(loadTimeout);
+                transitionImages();
+            };
+
+            if (nextImg.complete) {
+                transitionImages();
             } else {
-                AppState.currentHorizontalIndex = nextIndex;
+                loadTimeout = setTimeout(() => {
+                    console.warn(`Imagem ${type} demorou para carregar, forçando transição`);
+                    nextImg.removeEventListener('load', handleImageLoad);
+                    transitionImages();
+                }, 5000);
+                
+                nextImg.addEventListener('load', handleImageLoad, { once: true });
+                
+                nextImg.addEventListener('error', () => {
+                    clearTimeout(loadTimeout);
+                    console.error(`Erro ao carregar imagem ${type}`);
+                    this.showRandomImage(type);
+                }, { once: true });
             }
         }
     },
@@ -333,7 +476,22 @@ const App = {
         } catch (error) {
             console.error('Erro na inicialização:', error);
             this.handleInitError(error);
+            this.showUserFriendlyError('Ocorreu um erro ao carregar a aplicação. Por favor, recarregue a página.');
         }
+    },
+
+    showUserFriendlyError(message) {
+        const errorContainer = document.createElement('div');
+        errorContainer.className = 'error-notification';
+        errorContainer.setAttribute('role', 'alert');
+        errorContainer.setAttribute('aria-live', 'assertive');
+        errorContainer.innerHTML = `
+            <div class="error-content">
+                <p>${message}</p>
+                <button onclick="location.reload()" class="button">Recarregar</button>
+            </div>
+        `;
+        document.body.appendChild(errorContainer);
     },
 
     setupGlobalListeners() {
@@ -351,12 +509,7 @@ const App = {
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (!DOMElements.modals.map?.classList.contains('hidden')) {
-                    ModalManager.closeMapModal();
-                }
-                if (!DOMElements.modals.proposal?.classList.contains('hidden')) {
-                    ModalManager.closeProposalModal();
-                }
+                ModalManager.closeAllModals();
             }
         });
     },
@@ -392,8 +545,10 @@ const App = {
     cleanup() {
         CounterManager.stop();
         EffectsManager.stopEmojiRain();
+        EffectsManager.cleanupEmojis();
         CarouselManager.stopAutoPlay('vertical');
         CarouselManager.stopAutoPlay('horizontal');
+        ModalManager.cleanup();
     }
 };
 
@@ -461,12 +616,22 @@ const Utils = {
 
 const CounterManager = {
     init() {
+        if (typeof dateFns === 'undefined') {
+            console.warn('date-fns não carregado, tentando fallback...');
+            this.initFallback();
+            return;
+        }
         this.updateCounter();
+    },
+
+    initFallback() {
+        console.log('Usando contador com cálculo manual (fallback)');
+        this.updateCounterFallback();
     },
 
     updateCounter() {
         if (typeof dateFns === 'undefined') {
-            console.error('date-fns não carregado');
+            this.updateCounterFallback();
             return;
         }
 
@@ -487,6 +652,35 @@ const CounterManager = {
 
         AppState.counterAnimationFrameId = requestAnimationFrame(() => {
             setTimeout(() => this.updateCounter(), CONFIG.COUNTER_UPDATE_INTERVAL);
+        });
+    },
+
+    updateCounterFallback() {
+        const start = new Date(CONFIG.START_DATE);
+        const now = new Date();
+        
+        const diff = now - start;
+        const values = {
+            years: Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000)),
+            months: Math.floor(diff / (30.44 * 24 * 60 * 60 * 1000)) % 12,
+            days: Math.floor(diff / (24 * 60 * 60 * 1000)) % 30,
+            hours: Math.floor(diff / (60 * 60 * 1000)) % 24,
+            minutes: Math.floor(diff / (60 * 1000)) % 60,
+            seconds: Math.floor(diff / 1000) % 60
+        };
+
+        Object.entries(values).forEach(([unit, value]) => {
+            const element = DOMElements.counter[unit];
+            const lastValue = AppState.lastCounterValues[unit];
+
+            if (element) {
+                Utils.animateValueChange(element, value, lastValue);
+                AppState.lastCounterValues[unit] = value;
+            }
+        });
+
+        AppState.counterAnimationFrameId = requestAnimationFrame(() => {
+            setTimeout(() => this.updateCounterFallback(), CONFIG.COUNTER_UPDATE_INTERVAL);
         });
     },
 
@@ -590,34 +784,41 @@ const MusicManager = {
             }
 
             icon.classList.remove('fade-out');
-            icon.style.opacity = '1';
             icon.classList.add('fade-in');
 
             setTimeout(() => {
                 icon.classList.remove('fade-in');
-                icon.style.opacity = '';
-            }, CONFIG.ANIMATION_DURATION / 3);
-        }, CONFIG.ANIMATION_DURATION / 5);
+            }, CONFIG.ICON_FADE_DURATION);
+        }, CONFIG.ICON_FADE_DURATION);
     }
 };
 
 const ModalManager = {
+    listeners: new Map(),
+
     init() {
         this.initMapModal();
         this.initProposalModal();
         this.initHojeSempreModal();
     },
+
     initHojeSempreModal() {
         const { openHojeSempre, closeHojeSempre } = DOMElements.buttons;
         const { hojeSempre } = DOMElements.modals;
 
         if (!openHojeSempre || !closeHojeSempre || !hojeSempre) return;
 
-        openHojeSempre.addEventListener('click', () => this.openHojeSempreModal());
-        closeHojeSempre.addEventListener('click', () => this.closeHojeSempreModal());
-        hojeSempre.addEventListener('click', (e) => {
+        const openHandler = () => this.openHojeSempreModal();
+        const closeHandler = () => this.closeHojeSempreModal();
+        const clickOutsideHandler = (e) => {
             if (e.target === hojeSempre) this.closeHojeSempreModal();
-        });
+        };
+
+        openHojeSempre.addEventListener('click', openHandler);
+        closeHojeSempre.addEventListener('click', closeHandler);
+        hojeSempre.addEventListener('click', clickOutsideHandler);
+
+        this.listeners.set('hojeSempre', { openHandler, closeHandler, clickOutsideHandler });
     },
 
     openHojeSempreModal() {
@@ -641,12 +842,21 @@ const ModalManager = {
 
         if (!openMap || !closeMap || !map) return;
 
-        openMap.addEventListener('click', () => this.openMapModal());
-        closeMap.addEventListener('click', () => this.closeMapModal());
-        map.addEventListener('click', (e) => {
+        const openHandler = () => this.openMapModal();
+        const closeHandler = () => this.closeMapModal();
+        const clickOutsideHandler = (e) => {
             if (e.target === map) this.closeMapModal();
-        });
+        };
+        const toggleHandler = () => this.toggleMapView();
 
+        openMap.addEventListener('click', openHandler);
+        closeMap.addEventListener('click', closeHandler);
+        map.addEventListener('click', clickOutsideHandler);
+        if (toggleMapSky) {
+            toggleMapSky.addEventListener('click', toggleHandler);
+        }
+
+        this.listeners.set('map', { openHandler, closeHandler, clickOutsideHandler, toggleHandler });
     },
 
     initProposalModal() {
@@ -655,29 +865,25 @@ const ModalManager = {
 
         if (!openProposal || !closeProposal || !proposal) return;
 
-        openProposal.addEventListener('click', () => this.openProposalModal());
-        closeProposal.addEventListener('click', () => this.closeProposalModal());
-        proposal.addEventListener('click', (e) => {
+        const openHandler = () => this.openProposalModal();
+        const closeHandler = () => this.closeProposalModal();
+        const clickOutsideHandler = (e) => {
             if (e.target === proposal) this.closeProposalModal();
-        });
+        };
+
+        openProposal.addEventListener('click', openHandler);
+        closeProposal.addEventListener('click', closeHandler);
+        proposal.addEventListener('click', clickOutsideHandler);
+
+        this.listeners.set('proposal', { openHandler, closeHandler, clickOutsideHandler });
     },
 
     openMapModal() {
         const { map } = DOMElements.modals;
-        const { toggleMapSky } = DOMElements.buttons;
-
         if (!map) return;
 
         map.classList.remove('hidden');
         this.resetMapModal();
-
-        if (toggleMapSky) {
-            const newToggle = toggleMapSky.cloneNode(true);
-            toggleMapSky.parentNode.replaceChild(newToggle, toggleMapSky);
-            DOMElements.buttons.toggleMapSky = newToggle;
-
-            newToggle.addEventListener('click', () => this.toggleMapView());
-        }
 
         requestAnimationFrame(() => {
             map.style.opacity = '1';
@@ -710,39 +916,6 @@ const ModalManager = {
 
         const isSkyVisible = !skyContainer.classList.contains('hidden');
 
-        const currentHeight = modalContent.offsetHeight;
-
-        skyContainer.classList.add('hidden');
-        mapContainer.classList.add('hidden');
-
-        if (isSkyVisible) {
-            mapContainer.classList.remove('hidden');
-        } else {
-            skyContainer.classList.remove('hidden');
-        }
-
-        const targetHeight = modalContent.offsetHeight;
-
-        if (isSkyVisible) {
-            mapContainer.classList.add('hidden');
-            skyContainer.classList.remove('hidden');
-        } else {
-            skyContainer.classList.add('hidden');
-            mapContainer.classList.remove('hidden');
-        }
-
-        if (currentHeight !== targetHeight) {
-            modalContent.style.height = `${currentHeight}px`;
-
-            setTimeout(() => {
-                modalContent.style.height = `${targetHeight}px`;
-
-                setTimeout(() => {
-                    modalContent.style.height = '';
-                }, CONFIG.TRANSITION_DURATION);
-            }, 10);
-        }
-
         if (isSkyVisible) {
             skyContainer.classList.add('hidden');
             mapContainer.classList.remove('hidden');
@@ -770,6 +943,41 @@ const ModalManager = {
         if (!proposal) return;
 
         proposal.classList.add('hidden');
+    },
+
+    closeAllModals() {
+        this.closeMapModal();
+        this.closeProposalModal();
+        this.closeHojeSempreModal();
+    },
+
+    cleanup() {
+        this.listeners.forEach((handlers, modalType) => {
+            if (modalType === 'map') {
+                const { openMap, closeMap, toggleMapSky } = DOMElements.buttons;
+                const { map } = DOMElements.modals;
+                
+                if (openMap) openMap.removeEventListener('click', handlers.openHandler);
+                if (closeMap) closeMap.removeEventListener('click', handlers.closeHandler);
+                if (map) map.removeEventListener('click', handlers.clickOutsideHandler);
+                if (toggleMapSky) toggleMapSky.removeEventListener('click', handlers.toggleHandler);
+            } else if (modalType === 'proposal') {
+                const { openProposal, closeProposal } = DOMElements.buttons;
+                const { proposal } = DOMElements.modals;
+                
+                if (openProposal) openProposal.removeEventListener('click', handlers.openHandler);
+                if (closeProposal) closeProposal.removeEventListener('click', handlers.closeHandler);
+                if (proposal) proposal.removeEventListener('click', handlers.clickOutsideHandler);
+            } else if (modalType === 'hojeSempre') {
+                const { openHojeSempre, closeHojeSempre } = DOMElements.buttons;
+                const { hojeSempre } = DOMElements.modals;
+                
+                if (openHojeSempre) openHojeSempre.removeEventListener('click', handlers.openHandler);
+                if (closeHojeSempre) closeHojeSempre.removeEventListener('click', handlers.closeHandler);
+                if (hojeSempre) hojeSempre.removeEventListener('click', handlers.clickOutsideHandler);
+            }
+        });
+        this.listeners.clear();
     }
 };
 
@@ -807,13 +1015,26 @@ const EffectsManager = {
         emoji.style.animationDuration = `${2 + Math.random() * 2}s`;
 
         emojiRain.appendChild(emoji);
+        AppState.activeEmojiElements.add(emoji);
 
-        emoji.addEventListener('animationend', () => {
+        const removeEmoji = () => {
             if (emoji.parentNode) {
                 emoji.parentNode.removeChild(emoji);
             }
-        }, { once: true });
-    }, 100)
+            AppState.activeEmojiElements.delete(emoji);
+        };
+
+        emoji.addEventListener('animationend', removeEmoji, { once: true });
+    }, 100),
+
+    cleanupEmojis() {
+        AppState.activeEmojiElements.forEach(emoji => {
+            if (emoji.parentNode) {
+                emoji.parentNode.removeChild(emoji);
+            }
+        });
+        AppState.activeEmojiElements.clear();
+    }
 };
 
 if (document.readyState === 'loading') {
@@ -823,3 +1044,25 @@ if (document.readyState === 'loading') {
 }
 
 window.addEventListener('beforeunload', () => App.cleanup());
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('✅ Service Worker registrado com sucesso:', registration.scope);
+                
+                setInterval(() => {
+                    registration.update();
+                }, 60 * 60 * 1000);
+                
+                setInterval(() => {
+                    if (registration.active) {
+                        registration.active.postMessage({ type: 'CLEAR_OLD_CACHE' });
+                    }
+                }, 7 * 24 * 60 * 60 * 1000);
+            })
+            .catch(error => {
+                console.warn('❌ Falha ao registrar Service Worker:', error);
+            });
+    });
+}
