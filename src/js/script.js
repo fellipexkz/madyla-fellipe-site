@@ -747,6 +747,49 @@ const MusicManager = {
         audio.addEventListener('error', (e) => {
             console.error('Erro no áudio:', e);
         });
+
+        this.setupSpotifyConflictPrevention();
+    },
+
+    setupSpotifyConflictPrevention() {
+        const audio = DOMElements.music.audio;
+        if (!audio) return;
+
+        const spotifyIframe = document.querySelector('.spotify-embed-iframe');
+
+        document.addEventListener('click', (e) => {
+            const clickedSpotify = e.target.closest('.spotify-embed-container');
+            if (clickedSpotify && !audio.paused) {
+                setTimeout(() => {
+                    audio.pause();
+                    console.log('Música local pausada: interação com Spotify detectada');
+                }, 200);
+            }
+        });
+
+        audio.addEventListener('play', () => {
+            if (spotifyIframe) {
+                try {
+                    spotifyIframe.contentWindow.postMessage(
+                        { command: 'pause' },
+                        'https://open.spotify.com'
+                    );
+                } catch (e) {
+                    console.log('Spotify embed não pode ser controlado (limitação de segurança)');
+                }
+            }
+        });
+
+        let lastFocus = document.activeElement;
+        setInterval(() => {
+            const currentFocus = document.activeElement;
+            
+            if (currentFocus !== lastFocus && currentFocus === spotifyIframe && !audio.paused) {
+                audio.pause();
+                console.log('Música local pausada: foco no Spotify detectado');
+            }
+            lastFocus = currentFocus;
+        }, 500);
     },
 
     async toggle() {

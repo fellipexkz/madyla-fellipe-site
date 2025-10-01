@@ -1,0 +1,12 @@
+# robots.txt para madyla-fellipe-site
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://madyla-fellipe.pages.dev/sitemap.xml
+
+# Bloquear arquivos e diretórios desnecessários
+Disallow: /src/
+Disallow: /_headers
+Disallow: /sw.js
