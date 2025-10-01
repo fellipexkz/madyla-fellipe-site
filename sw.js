@@ -93,7 +93,7 @@ async function cacheFirstStrategy(request, cacheName) {
 
         const networkResponse = await fetch(request);
         
-        if (networkResponse.ok) {
+        if (networkResponse.ok && networkResponse.status === 200) {
             const cache = await caches.open(cacheName);
             cache.put(request, networkResponse.clone());
             await limitCacheSize(cacheName, MAX_CACHE_SIZE);
