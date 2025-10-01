@@ -405,11 +405,30 @@ body {
     border-radius: var(--border-radius-large);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     max-width: 90vw;
-    max-height: 80vh;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.custom-modal-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-modal-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-modal-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 102, 153, 0.5);
+    border-radius: 3px;
+}
+
+.custom-modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
 }
 
 .modal-message {
@@ -417,9 +436,11 @@ body {
     border-radius: var(--border-radius);
     padding: 1.25rem 1rem;
     max-width: var(--max-content-width);
-    margin: 0 auto;
+    margin: 0 auto 1rem auto;
     color: var(--text-primary);
     text-align: left;
+    max-height: calc(90vh - 180px);
+    overflow-y: auto;
 }
 
 .modal-message-content p {
@@ -478,6 +499,8 @@ body {
     width: 100%;
     justify-content: flex-end;
     padding-top: 1.125rem;
+    margin-top: auto;
+    flex-shrink: 0;
 }
 
 .modal-sky-btn {
@@ -659,14 +682,21 @@ body {
     }
 
     .custom-modal-content {
-        padding: 1rem 0.75rem;
+        padding: 1rem 0.75rem 1.5rem;
         max-width: 95vw;
+        max-height: 92vh;
+    }
+    
+    .modal-message {
+        max-height: calc(92vh - 160px);
+        padding: 1rem 0.75rem;
     }
 
     .modal-actions {
         gap: 0.5rem;
         flex-direction: column-reverse;
         align-items: center;
+        padding-bottom: 0.5rem;
     }
 
     .modal-sky-btn {
@@ -706,6 +736,85 @@ body {
 
     .timeline-title {
         font-size: 1.25rem;
+    }
+    
+    .custom-modal-content {
+        padding: 0.75rem 0.5rem 1.25rem;
+        max-width: 98vw;
+        max-height: 94vh;
+    }
+    
+    .modal-message {
+        max-height: calc(94vh - 140px);
+        padding: 0.875rem 0.625rem;
+        font-size: 0.9rem;
+    }
+    
+    .modal-message-content p {
+        font-size: 0.9rem;
+        margin-bottom: 0.875rem;
+    }
+}
+
+@media (max-height: 600px) {
+    .custom-modal-content {
+        max-height: 95vh;
+        padding: 0.75rem 0.75rem 1rem;
+    }
+    
+    .modal-message {
+        max-height: calc(95vh - 120px);
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .modal-message-content p {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+        line-height: 1.5;
+    }
+    
+    .modal-actions {
+        padding-top: 0.75rem;
+    }
+    
+    .button {
+        padding: 0.75em 1.25em;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-height: 500px) {
+    .custom-modal-content {
+        max-height: 96vh;
+        padding: 0.5rem 0.75rem 0.75rem;
+    }
+    
+    .modal-message {
+        max-height: calc(96vh - 100px);
+        padding: 0.625rem;
+        font-size: 0.85rem;
+    }
+    
+    .modal-message-content p {
+        font-size: 0.85rem;
+        margin-bottom: 0.625rem;
+        line-height: 1.4;
+    }
+    
+    .modal-message-signature {
+        margin-top: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .modal-actions {
+        padding-top: 0.5rem;
+    }
+    
+    .button {
+        padding: 0.625em 1em;
+        font-size: 0.7rem;
+        min-width: 8em;
     }
 }
 
